@@ -2,6 +2,8 @@
 All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
+### Added
+- Added support for aarc_idp_hint
 
 ## [v2.5.0]
 ### Added

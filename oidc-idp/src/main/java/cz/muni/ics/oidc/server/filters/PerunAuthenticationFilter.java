@@ -193,6 +193,11 @@ public class PerunAuthenticationFilter extends AbstractPreAuthenticatedProcessin
 			params.put(PARAM_FORCE_AUTHN, "true");
 		}
 
+		String aarcIdpHint = extractAarcIdpHintFromRequestParam(req);
+		if (aarcIdpHint != null) {
+			params.put(AARC_IDP_HINT, aarcIdpHint);
+		}
+
 		String finalUrl = addParamsToUrl(base, params);
 		log.trace("{} - buildLoginUrl: returning '{}'", FILTER_NAME, finalUrl);
 		return finalUrl;
@@ -287,6 +292,15 @@ public class PerunAuthenticationFilter extends AbstractPreAuthenticatedProcessin
 		}
 
 		return acrValues;
+	}
+
+	private String extractAarcIdpHintFromRequestParam(HttpServletRequest req) {
+		String aarcIdpHint = null;
+		if (req.getParameter(AARC_IDP_HINT) != null) {
+			aarcIdpHint = req.getParameter(AARC_IDP_HINT);
+		}
+
+		return aarcIdpHint;
 	}
 
 	private String extractIdpEFilter(HttpServletRequest req, Map<String, PerunAttributeValue> filterAttributes) {
