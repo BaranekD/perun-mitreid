@@ -15,6 +15,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.web.authentication.preauth.AbstractPreAuthenticatedProcessingFilter;
 import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
+import org.springframework.util.StringUtils;
 
 import javax.servlet.FilterChain;
 import javax.servlet.ServletException;
@@ -24,6 +25,7 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
@@ -193,11 +195,6 @@ public class PerunAuthenticationFilter extends AbstractPreAuthenticatedProcessin
 			params.put(PARAM_FORCE_AUTHN, "true");
 		}
 
-		String aarcIdpHint = extractAarcIdpHintFromRequestParam(req);
-		if (aarcIdpHint != null) {
-			params.put(AARC_IDP_HINT, aarcIdpHint);
-		}
-
 		String finalUrl = addParamsToUrl(base, params);
 		log.trace("{} - buildLoginUrl: returning '{}'", FILTER_NAME, finalUrl);
 		return finalUrl;
@@ -206,17 +203,30 @@ public class PerunAuthenticationFilter extends AbstractPreAuthenticatedProcessin
 	private String buildAuthnContextClassRef(String clientId, HttpServletRequest req) {
 		String filterParam = constructIdpFilter(clientId, req);
 		String acrValues = extractAcrValuesFromRequestParam(req);
+		// temporarily, while OIDC is behind shibboleth, the AARC_IDP_HINT is passed in authnContextClassRef
+		// when migrated to an embedded SAML SP, different auth or SMTH similar, it can be passed as a separate param
+		String aarcIdpHint = extractAarcIdpHintFromRequestParam(req);
 
 		StringJoiner joiner = new StringJoiner(" ");
-		if (filterParam != null) {
+		if (StringUtils.hasText(aarcIdpHint)) {
+			try {
+				joiner.add(IDP_ENTITY_ID_PREFIX + URLDecoder.decode(aarcIdpHint, StandardCharsets.UTF_8.toString()));
+			} catch (UnsupportedEncodingException e) {
+				//this should not happen
+			}
+		}
+
+		if (StringUtils.hasText(filterParam)) {
 			joiner.add(filterParam);
 		}
 
-		if (acrValues != null) {
+		if (StringUtils.hasText(acrValues)) {
 			String[] parts = acrValues.split(" ");
 			if (parts.length > 0) {
 				for (String part: parts) {
-					joiner.add(part);
+					if (StringUtils.hasText(part)) {
+						joiner.add(part.trim());
+					}
 				}
 			}
 		}
